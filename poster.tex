@@ -1,0 +1,424 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% NIWeek 2014 Poster by T. Reveyrand
+% www.microwave.fr
+% http://www.microwave.fr/LaTeX.html
+% ---------------------------------------
+% 
+% Original template created by:
+% Brian Amberg (baposter@brian-amberg.de)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[a0paper,portrait]{baposter}
+
+\usepackage[font=small,labelfont=bf]{caption} % Required for specifying captions to tables and figures
+\usepackage{booktabs} % Horizontal rules in tables
+\usepackage{relsize} % Used for making text smaller in some places
+\usepackage{wrapfig}
+\usepackage{amsmath,amsfonts,amssymb,amsthm} % Math packages
+\usepackage{eqparbox}
+\usepackage{ulem}
+\usepackage{textcomp}
+\usepackage{enumitem}
+\graphicspath{{figures/}} % Directory in which figures are stored
+
+ \definecolor{bordercol}{RGB}{40,40,40} % Border color of content boxes
+ \definecolor{headercol1}{RGB}{186,215,230} % Background color for the header in the content boxes (left side)
+ \definecolor{headercol2}{RGB}{75,0,130} % Background color for the header in the content boxes (right side)
+ \definecolor{headerfontcol}{RGB}{0,0,0} % Text color for the header text in the content boxes
+ \definecolor{boxcolor}{RGB}{255,255,255} % Background color for the content in the content boxes
+
+
+\begin{document}
+
+\background{ % Set the background to an image (background.pdf)
+\begin{tikzpicture}[remember picture,overlay]
+\draw (current page.north west)+(-2em,2em) node[anchor=north west]
+{\includegraphics[height=1.1\textheight]{background}};
+\end{tikzpicture}
+}
+
+\begin{poster}{
+grid=false,
+borderColor=bordercol, % Border color of content boxes
+headerColorOne=headercol1, % Background color for the header in the content boxes (left side)
+headerColorTwo=headercol2, % Background color for the header in the content boxes (right side)
+headerFontColor=headerfontcol, % Text color for the header text in the content boxes
+boxColorOne=boxcolor, % Background color for the content in the content boxes
+headershape=roundedright, % Specify the rounded corner in the content box headers
+headerfont=\Large\sf\bf, % Font modifiers for the text in the content box headers
+textborder=rectangle,
+background=user,
+headerborder=open, % Change to closed for a line under the content box headers
+boxshade=plain
+}
+{\includegraphics[scale=0.05]{figures/udem.png}}
+%
+%----------------------------------------------------------------------------------------
+%	TITLE AND AUTHOR NAME
+%----------------------------------------------------------------------------------------
+%
+{ \bf  \Huge {Rethinking Belief Propagation: \\Can Graph Neural Networks Take the Lead?} } % Poster title
+{\vspace{0.25em} \smaller Anita Kriz$^1$, Clemence Granande$^1$, Anthony Gosselin$^1$, Jeremy Qin$^1$, Alireza Dizaji$^1$   \\  % Author names
+
+\smaller $^1$\it {Mila} \\ } 
+{\includegraphics[scale=0.3]{figures/Mila.png}} % University/lab logo
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+
+\headerbox{Introduction}{name=introduction,column=0,row=0, span=3}{
+\centering 
+\textbf{Problem: Performing inference tasks on graphs is HARD} 
+
+\begin{minipage}[t]{0.20\textwidth}
+    \centering\textbf{} \\
+    \includegraphics[width=1.2\textwidth]{figures/bp.png} % Replace 'example-image-a' with your figure file name and extension
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.25\textwidth}
+    \textbf{\textit{It is possible on trees...}}
+    \vspace{2pt} \\
+    % \textbf{To compute marginals for inference:} \\
+    \textbf{X} \uline{{Naïve Marginalization:}} in $O(k^{|N|})$ 
+    \begin{align}
+        P(x_i) &= \sum_{x_1 \in X_1}\ldots \sum_{x_{N} \in X_{N}} P(x_1, x_2, \ldots, x_{N}) \nonumber
+    \end{align}
+    \checkmark \uline{Belief Propagation (BP)} in  $O(|N|)$:
+    \begin{itemize}[itemsep=.5pt]
+        \item \textbf{Initiate} message passing at leaves
+        \item \textbf{Propagate and Store} messages up to the root and back
+    \end{itemize} 
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.18\textwidth}
+    \centering\textbf{} \\
+    \includegraphics[width= 1.2\textwidth]{figures/bp_cycle.png} % Replace 'example-image-a' with your figure file name and extension
+\end{minipage}%
+\hfill
+\begin{minipage}[t]{0.3\textwidth}
+\textbf{\textit{... but not on graphs in general}}
+\vspace{1pt} \\
+ Can \textbf{approximate}: run BP for $t$ iterations, BUT:
+\begin{itemize}
+    \item May not converge, even as $t \to \infty$ 
+    \item May not have a closed-form solution 
+    \item May not be accurate due to the complex dependencies in graph 
+\end{itemize} 
+\end{minipage} \\
+\centering \textbf{Research Question: How can we find better approximators for inference tasks in Probabilistic Graphical Models (PGMs)?}
+}
+
+
+%----------------------------------------------------------------------------------------
+%	BACKGROUND
+%----------------------------------------------------------------------------------------
+\headerbox{Background}{name=background,column=0, below=introduction}{
+
+\subsection*{Belief Propagation}
+Can be generalized to graphs with loops, i.e. \textit{loopy BP}:
+\begin{equation}
+        \mu_{i \to \alpha}^{(t)}(X_i) = \prod_{\beta \in N_i \setminus \alpha} \mu_{\beta \to i}^{(t-1)}(X_i)
+        \end{equation}
+\begin{equation}
+\mu_{\alpha \to i}^{(t)}(X_i) = \sum_{\substack{X_{\alpha} \setminus X_i}} \psi_{\alpha}(X_{\alpha}) \prod_{j \in N_\alpha \setminus i} \mu_{j \to \alpha}^{(t-1)}(X_j)
+\end{equation}
+where $N_i$ are the neighbors of variable node $X_i$ and $N_\alpha$ are the neighbors of factor nodes $\alpha$ 
+\subsection*{GNNs}
+Use a message passing method $\bm{m}^{(t+1)}_{i\rightarrow}$ to obtain the hidden vector states $\bm{h}_i^{(t+1)}$ for a GNN node $v_i$ at time $t+1$:
+\begin{equation}
+    \bm{m}_{i}^{(t)} = \sum_{j \in N(i)} \bm{m}^{t+1}_{j \to i} =  
+    \sum_{j \in N(i)} \mathcal{M}\left(\bm{h}^t_j, \bm{h}^t_i, e_{ji}\right)
+\end{equation}
+\begin{align*}
+    \bm{h}_i^{(t+1)} = \mathcal{U}(\bm{h}_i^{(t)}, \bm{m}_{i}^{(t+1)})
+\end{align*}
+% \begin{itemize}
+%     \item $\bm{h}_i^{(t+1)}$: hidden vector states for a GNN node $v_i$ at time $t+1$
+%  \item $\bm{m}^{(t+1)}_{i\rightarrow}$: message from GNN node $v_i$ to connect GNN node $v_j$ sent at time $t+1$
+%  \item $\mathcal{M}$: MLP with ReLu
+%  \item $e_{i, j}$: edge labels/properties between the nodes
+%  \item $N(i)$: indices of neighboring nodes for node $v_i$
+%  \item $\mathcal{U}$: update function (GRU or LSTM)
+%  \item $\hat{y}$: output marginals
+% \end{itemize}
+Obtain the marginal distribution at $T$:
+\begin{align*}
+    \bm{\hat{y}} = \sigma (\bm{h}^{(T)})
+\end{align*}
+Trained with $L(\bm{\hat{y}}, \bm{y}) = -\bm{y}_i(x_i)\log(\bm{\hat{y}}_i(x_i))$
+
+\textbf{$\Rightarrow$ Update Functions}
+
+\begin{center}
+\minipage{0.45\textwidth}
+\begin{center}
+\textbf{LSTM}
+\includegraphics[width=\linewidth]{./poster_imgs/LSTM.png}
+% \begin{align*}
+%     i_t = 
+%     \bm{h}_i^{(t+1)} = o_t * tanh(c_t) 
+% \end{align*}
+\end{center}
+\endminipage\hfill
+\minipage{0.45\textwidth}
+\begin{center}
+\textbf{GRU}
+\includegraphics[width=\linewidth]{./poster_imgs/GRU.png}
+\end{center}
+\endminipage\hfill
+\end{center}
+
+
+\textbf{$\Rightarrow$ Soft Attention Mechanism}
+
+\minipage{0.32\textwidth}
+\begin{center}
+\includegraphics[width=\linewidth]{./poster_imgs/soft_attention.png}
+\end{center}
+\endminipage\hfill
+\minipage{0.32\textwidth}\begin{center}
+\begin{align*}
+    c'_t &= \text{LeakyRelu}(e_{i,j}*A^\intercal + b) \\
+    c_t &= \text{softmax}(c'_t)\\
+    e_{i,j} &= c_t * e'_{i,j} \\
+\end{align*}
+\end{center}\endminipage\hfill
+
+
+% \begin{figure}[ht]
+%     \centering
+%     \begin{subfigure}{0.3\linewidth}
+%         \centering
+%         \includegraphics[width=\linewidth]{./poster_imgs/Attention.png}
+%         \caption{Caption for Image 1}
+%     \end{subfigure}
+%     \hspace{1cm}
+%     \begin{subfigure}{0.3\linewidth}
+%         \centering
+%         \includegraphics[width=\linewidth]{./poster_imgs/Attention.png}
+%         \caption{Caption for Image 2}
+%     \end{subfigure}
+%     \hspace{1cm}
+%     \begin{subfigure}{0.3\linewidth}
+%         \centering
+%         \includegraphics[width=\linewidth]{./poster_imgs/Attention.png}
+%         \caption{Caption for Image 3}
+%     \end{subfigure}
+%     \caption{Overall Caption for the Figure}
+%     \label{fig:your_figure_label}
+% \end{figure}
+}
+
+
+%----------------------------------------------------------------------------------------
+%	MAPPING
+%----------------------------------------------------------------------------------------
+\headerbox{PGM to GNN Mapping}{name=mapping,span=2,column=1,row=1, below=introduction}{ % To reduce this block to 1 column width, remove 'span=2'
+\begin{minipage}[t]{0.25\textwidth}
+    \centering\textbf{} \\
+    \includegraphics[width = .8\textwidth]{figures/gnn_mapping.png}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.36\textwidth}
+    \textsc{Message Node Mapping}\\
+    Message updates:
+    \begin{equation}
+    m^{(t+1)}_{i \to j} = \mathcal{M}\left(\sum_{k \in N_{i} \setminus {j}} h^t_{k \to i}, e_{ij}\right)
+    \end{equation}
+    Hidden State Updates:
+    \begin{equation}
+    h_{i \to j}^{(t+1)} = \mathcal{U}(h_{i \to j}^{(t)}, \bm{m}_{i \to j}^{(t + 1)})
+    \end{equation}
+    Node Marginals:
+    \begin{equation}
+    \hat{p}_i(X_i) = \mathcal{R}\left(\sum_{j \in N_i} h^{T}_{j \to i}\right)
+    \end{equation}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{.3\textwidth}
+    \textsc{Variable Node Mapping} \\
+    \\
+    \begin{equation}
+    m^{(t+1)}_{i \to j} = \mathcal{M}\left({h}^t_i, {h}^t_j, e_{ij}\right)
+    \end{equation}
+    \begin{equation}
+    m^{(t+1)}_{i} = \sum_{j \in N_{i}} m^{(t+1)}_{j \to i}
+    \end{equation}
+   \\
+    \begin{equation}
+    h_{i \to j}^{(t+1)} = \mathcal{U}(h_{i}^{(t)}, \bm{m}_{i}^{(t + 1)})
+    \end{equation}
+   \\
+    \begin{equation}
+    \hat{p}_i(X_i) = \mathcal{R}(h^{T}_i)
+    \end{equation}
+\end{minipage}
+}
+
+
+%----------------------------------------------------------------------------------------
+%	EXPERIMENTS
+%----------------------------------------------------------------------------------------
+% \headerbox{Experiments}{name=experiments,span=2,column=1,row=1, below=mapping}{
+% \begin{minipage}{0.3\textwidth}
+%     \subsection*{Graphs}
+%     \begin{center}
+%         \centering
+%         \includegraphics[width=0.2\linewidth]{./graph_imgs/Star.png}
+%         \includegraphics[width=0.2\linewidth]{./graph_imgs/Path.png}
+%     \end{subfigure}
+    
+%     Tree Graphs [1,2]
+%     \end{center}
+    
+%     \begin{center}
+%     \begin{subfigure}
+%         \includegraphics[width=0.2\linewidth]{./graph_imgs/Cycle.png}
+%         \includegraphics[width=0.2\linewidth]{./graph_imgs/Grid.png}
+%         \includegraphics[width=0.2\linewidth]{./graph_imgs/Wheel.png}
+%         \includegraphics[width=0.2\linewidth]{./graph_imgs/FC.png}
+%     \end{subfigure}
+
+%     Cycle Graphs [3, 4, 5, 6]
+%     \end{center}
+%     % \includegraphics[width = .9\linewidth]{figures/graphs.png}
+% \end{minipage} \hfill
+% \begin{minipage}{.6\textwidth}
+%     \subsection*{Models}
+%     \begin{itemize}
+%     \item Baseline:
+%     \begin{itemize}
+%         \item Belief Propagation
+%     \end{itemize}
+%     \item For each mapping method:
+%     \begin{itemize}
+%         \item GNN with GRU/LSTM Update Function
+%     \end{itemize}
+%     \item MGNN with GRU and Soft Attention 
+%     \end{itemize}
+% \end{minipage}
+% }
+
+
+%----------------------------------------------------------------------------------------
+%	RESULTS
+%----------------------------------------------------------------------------------------
+\headerbox{Experiments \& Results}{name=results,span=2,column=1,below=mapping}{ 
+\begin{minipage}[t]{0.5\textwidth}
+    \textbf{Graphs}
+    \begin{center}
+    \begin{subfigure}
+        \centering
+        \includegraphics[width=0.25\linewidth]{./graph_imgs/Star.png}
+        \includegraphics[width=0.25\linewidth]{./graph_imgs/Path.png}
+        \includegraphics[width=0.25\linewidth]{./graph_imgs/Cycle.png}
+        \includegraphics[width=0.25\linewidth]{./graph_imgs/Grid.png}
+        \includegraphics[width=0.25\linewidth]{./graph_imgs/Wheel.png}
+        \includegraphics[width=0.25\linewidth]{./graph_imgs/FC.png}
+    \end{subfigure}
+    
+    Graph structure types: star, path, cycle, grid, wheel, fc
+    \end{center}
+\end{minipage} \hfill
+\begin{minipage}[t]{.5\textwidth}
+    \textbf{In Sample Performance}
+    \begin{center}
+        \includegraphics[width=.9\linewidth]{./poster_imgs/insample_perf.png}
+    \end{center}
+\end{minipage} \hfill
+\begin{minipage}{.5\textwidth}
+    \textbf{Combined Dataset Performance}
+    \begin{center}
+        \includegraphics[width=.9\linewidth]{./poster_imgs/combined_perf.png}
+    \end{center}  
+\end{minipage} \hfill
+\begin{minipage}{.5\textwidth}
+    \textbf{Inference Time}
+    \begin{center}
+        \includegraphics[width=.9\linewidth]{./poster_imgs/inference_time.png}
+    \end{center} 
+\end{minipage}
+}
+
+% \subsection*{Scatter plots}
+%     % \includegraphics[width = .9\linewidth]{figures/graphs.png}
+%     \begin{center}
+%     \begin{subfigure}
+%         \centering
+%         \includegraphics[width=0.1\linewidth]{plots/star/res_mgnn_inference_star_small_star_small_bp.png}
+%         \includegraphics[width=0.1\linewidth]{plots/path/res_mgnn_inference_path_small_path_small_bp.png}
+%         \includegraphics[width=0.1\linewidth]{plots/grid/res_grid_small_mgnn_inference_bp.png}
+
+%         \includegraphics[width=0.1\linewidth]{plots/star/res_mgnn_inference_star_small_star_small_gnn.png}   
+%         \includegraphics[width=0.1\linewidth]{plots/path/res_mgnn_inference_path_small_path_small_gnn.png}    \includegraphics[width=0.1\linewidth]{plots/grid/res_grid_small_mgnn_inference_gnn.png}
+        
+%         \includegraphics[width=0.1\linewidth]{plots/star/res_factor_gnn_inference_star_small_star_small_gnn.png}
+%         \includegraphics[width=0.1\linewidth]{plots/path/res_factor_gnn_inference_path_small_path_small_gnn.png}
+%         \includegraphics[width=0.1\linewidth]{plots/grid/res_grid_small_factor_gnn_inference_gnn.png}
+%     \end{subfigure}
+
+%     True vs Expected Marginal for Small Graphs with BP, MGNN and FGNN (top to bottom) 
+%     \end{center}
+
+
+%----------------------------------------------------------------------------------------
+%	CONCLUSION
+%----------------------------------------------------------------------------------------
+% \headerbox{Conclusion}{name=conclusion,column=1,below=results,span=2}{
+
+% }
+
+
+%----------------------------------------------------------------------------------------
+%	REFERENCES
+%----------------------------------------------------------------------------------------
+
+%\headerbox{References}{name=references,column=2,below=application}{
+
+%\smaller % Reduce the font size in this block
+%\renewcommand{\section}[2]{\vskip 0.05em} % Get rid of the default "References" section title
+%\nocite{*} % Insert publications even if they are not cited in the poster
+
+%\bibliographystyle{unsrt}
+%\bibliographystyle{IEEEtran}
+%\bibliography{biblio} % Use biblio.bib as the bibliography file
+%}
+\headerbox{Conclusion \& Future Developments}
+{name=conclusion,column=1,below=results, above=bottom,span=2}{
+\begin{itemize}[noitemsep]
+    \item GNN models are more robust to increasing graph complexity w.r.t. computation time
+    \item GNNs are great candidates when increasing the complexity of graph, with no significantly or consistantly optimal model
+    
+\textbf{Potential Developments:} applying attention during $\mathcal{U}$; to other model structures (not Ising)
+\end{itemize}
+\vspace{.25pt}
+} 
+
+%----------------------------------------------------------------------------------------
+%	ACKNOWLEDGEMENTS
+%----------------------------------------------------------------------------------------
+
+\headerbox{Acknowledgements}{name=acknowledgements,column=0,below=background, above=bottom,span=1}{
+\scriptsize
+We acknowledge the work of Yoon et al., "Inference in Probabilistic Graphical Models by Graph Neural Networks", 2019, and the use of open-source code from https://github.com/sunfanyunn/FE-GNN/tree/master. 
+} 
+
+% \headerbox{Conclusion}{name=conclusion,column=1,below=results,span=1}{
+
+% }
+
+\end{poster}
+
+\end{document}

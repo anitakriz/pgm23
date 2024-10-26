@@ -1,0 +1,433 @@
+%%%%%%%% ICML 2020 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{bm}
+\usepackage{subfigure}
+\usepackage{mathrsfs,amsmath}
+\usepackage{booktabs} % for professional tables
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2020} with \usepackage[nohyperref]{icml2020} above.
+\usepackage{hyperref}
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+%\usepackage{icml2020}
+
+% If accepted, instead use the following line for the camera-ready submission:
+\usepackage[accepted]{icml2020}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Inference in Probabilistic Graphical Models by Graph Neural Networks - Reproduction and Extension}
+\usepackage{xcolor} 
+
+\definecolor{bittersweet}{rgb}{1.0, 0.44, 0.37}
+
+\newcommand{\clem}[1]{\textcolor{blue}{[Clemence : #1]}}
+
+\newcommand{\anita}[1]{\textcolor{bittersweet}{[Anita : #1]}}
+
+\newcommand{\anthony}[1]{\textcolor{green}{[Anthony : #1]}}
+
+\newcommand{\alireza}[1]{\textcolor{orange}{[Alireza : #1]}}
+
+\newcommand{\jeremy}[1]{\textcolor{purple}{[Jeremy : #1]}}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Inference in Probabilistic Graphical Models by Graph Neural Networks - Reproduction and Extension}
+
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Clemence Granade}{one}
+\icmlauthor{Anita Kriz}{one}
+\icmlauthor{Alireza Dizaji}{one}
+\icmlauthor{Anthony Gosselin}{one}
+\icmlauthor{Jeremy Qin}{one}
+\end{icmlauthorlist}
+
+% \icmlaffiliation{one}{Laboratorio de Bioinformática y Biología Molecular, Universidad Peruana Cayetano Heredia, Peru}
+% \icmlaffiliation{two}{Visual Intelligence and Machine Perception Group
+% University of Padova, Italy}
+
+
+% \icmlcorrespondingauthor{Mirko Zimic}{mirko.zimic@upch.pe}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+Although exact inference in Probabilistic Graphical Models (PGMs) is possible on relatively small graphs and in tree-like graphs by using message passing algorithms such as Belief Propagation (BP), performing these tasks on graphs of arbitrary size and connectivity is computationally expensive and often intractable. Methods like BP can be used for approximate inference but generally struggle in loopy graphs or graphs with far-reaching node dependencies. Although used in different applications, there is a striking parallel between the fundamental concept of message passing in PGMs and Graph Neural Networks (GNN). This naturally gives way to using GNNs for approximate inference in PGMs by mapping nodes in PGMs to nodes in GNNs. In this work, we compare BP with GNN methods both in tree and non tree graph structures. To extrapolate the need for importance weighing in graph structures, we explore the use of soft attention in GNNs. Expanding on the works of Yoon et al. (2019), our work demonstrates that using this mechanism in the GNN outperforms its variants and BP on various graphs. Our code is publically available here\footnote{\hyperlink{https://github.com/ClemenceG/gnn-for-inference}{GitHub Repository}}. 
+
+\end{abstract}
+
+
+\section{Introduction}
+
+A common task when using a probabilistic graphical model (PGM) is to compute marginal probability distributions $p_i(x_i)$ at one (or each) node $x_i$ of the graph. This value can provide insights into the uncertainty and likelihood of that node on its own, regardless of other nodes in the graph. For example, given a graph containing information about a diagnostic test, disease, and symptoms, the marginal probability of the test results is crucial in understanding outcomes in the context of disease prevalence and symptom onset. 
+
+However, as the complexity of a graph increases, exact inferences of this kind become computationally intractable. Consider having to marginalize out $|N|$ nodes, each that can take on k values. This requires the summation of $k^{|N|}$ values, which even for relatively small graphs becomes computationally expensive. For this reason, message passing algorithms that build on dynamic programming methods are required - one of which is the belief propagation (BP) algorithm. Although developed for exact inference on tree graphs, the BP algorithm can only be used as an approximation on non-tree graphs. 
+
+There is a remarkable parallelism between the message passing algorithms used in PGMs and Graph Neural Networks (GNNs), a deep learning framework that can perform prediction tasks on graph structures \cite{gnn}. Notably, both share the fundamental concept of passing messages between nodes. Given the end-to-end capabilities, GNNs that use probabilistic information as features hold significant potential in being able to approximate inferences in PGMs. More specifically, the incorporation of non-linear functions in its NN formulation has the ability to represent complex relationships between nodes. Thus, by mapping the nodes of a PGM to the nodes of a GNN, running approximate inference tasks can become feasible. Yoon et. al (2019) use two different mappings from PGM to GNN nodes, one which uses the factor nodes as the GNN nodes and the other which uses the variable nodes themselves. The intuition with the latter is that it may alleviate the representational power required when additionally mapping factor nodes, allowing for greater flexibility. 
+
+Our main contributions are the following:
+\begin{enumerate}
+    \item Firstly, we provide an in depth quantitative analysis of BP compared to approximate inference via GNNs for both tree and non-tree graph structures. We highlight the theoretical reasoning of using these techniques and their respective trade-offs in terms of accuracy and computation time.
+    \item Secondly, we extend the work of \cite{inf_pgm_gnn} by considering different GG-NN \cite{ggnn} architectures in order to find a balance between long-term dependencies and importance of neighboring nodes. We compared the performances of the models with GRU and LSTM update functions and when incorporating a soft attention mechanism.
+    
+\end{enumerate}
+
+Overall, our results establish the potential of rethinking BP by using GNNs in PGM inference tasks. 
+\section{Background}
+\subsection{Undirected Probabilistic Graphical Models}
+Probabilistic graphical models are graph stuctures that enable the representation of joint dependencies through conditional distributions between random variables. Undirected graphical models $G=(V,E)$ can be represented through factor graphs. These undirected, bipartite graphs connect individual variable nodes $i \in V$ to factor nodes $\alpha  \in \mathcal{F}$. The former encode $x_i$ individual nodes and the latter encode the interactions $\psi_\alpha(x_\alpha)$ between variable node groups $\bm{x}_\alpha$. $\bm{x}_\alpha$ contains all individual nodes $i$ connected to the factor node $\alpha$. The product of these interactions defines the probability distribution of the graph:
+\begin{align*}
+    \frac{1}{Z} \prod_{\alpha \in \mathcal{F}} \psi_\alpha(\bm{x}_\alpha)
+\end{align*}
+with $Z$ is the normalizing constant.
+
+\subsection{Binary Markov Random Fields}
+Our experiments were run on binary Markov random fields, more particularly Ising models. These are undirected graphs encoding random variables that follow the Markov property with binary random variable nodes selected  $\bm{x} \in \{-1, +1\}^{|V|}$ . Ising models were one of the first Markov models to model the energy in a system according to the atom interactions. Each variable node $x_i$ has it's intrinsic energy function as well the energy from each interacting connected atom \cite{pgm_book}.
+Restricting to Ising models, the energy function is defined as $\psi_i(x_i) = \exp\{ b_i x_i\}$ and associated edge energy function as $\psi_{i,j}(x_i, x_j) = \exp\{ J_{i, j} x_i x_j\}$. Deriving the exact joint distribution:
+\begin{align*}
+    p(\bm{x}) = \frac{1}{Z} \exp(\bm{b} \mb{x}+\mb{x}\mb{J}\mb{x})
+\end{align*}
+with $\mb{b}$ composed of biases $b_i$ for all $i \in V$ and $\mb{J}$ a symmetric matrix composed of $J_{i,j}$ for all $\{i, j\} \in E$. For the following experiments, $\mb{b}$ and $\mb{J}$ are selected at random.
+
+\subsection{Belief Propagation}
+
+Computing marginals (and thus conditionals) of a graphical model using naive algorithms is extremely computationally expensive. Consider a graph with N nodes $ X = \{X_1, X_2, ..., X_N\}$ such that each node $X_i$ can take on $k$ values. To obtain the marginal of a node $X_i$, the intuitive solution is to marginalize out all other nodes from the joint distribution: 
+% \begin{equation}
+% P(X_i) = \sum_{x_1}\sum_{x_2}\ldots\sum_{x_n} P(X_1, X_2, \ldots, X_n)
+% \end{equation}
+% \alireza{
+\begin{equation}
+P(X_i) = \sum_{x_1}\sum_{x_2}\ldots\sum_{x_{i-1}}\sum_{x_{i+1}}\ldots\sum_{x_n} P(X_1, X_2, \ldots, X_n)
+\end{equation}
+% }
+By examination of this equation, the problem becomes clear. Computing the marginal of a single node requires computing $N$ sums with $k$ values to iterate through in each sum, yielding a compute complexity of $k^{|N|}$. Even for reasonably low values of both parameters, computation quickly becomes expensive, and as the number of nodes grows, intractable. Thus, there is a need for methods to compute and approximate the marginal distributions that can reduce this computation time. 
+
+Belief propagation, otherwise known as the sum-product algorithm in coding theory, is a message-passing algorithm that operates by retrieving messages associated with edges in a graph and updating them recursively via local computations done at the vertices \cite{bp_book}. In other words, BP uses dynamic programming to perform the recursion, a method that can greatly reduce computation time. This algorithm extends from the simpler elimination algorithm for single queries by using a key insight: when passing messages from one node to another to compute their marginals, we are re-using messages that will be used to compute another marginal distribution. Therefore, if instead of finding the marginal distribution of a single node $X_i$ we want to know how \textit{all} the nodes are distributed, we do not have to run the elimination algorithm $N$ times. Instead, if there exists an edge between nodes $X_i$ and $X_{i+1}$, we simply compute two messages, the message $ \mu_{i \to i+1}$ and $ \mu_{i+1 \to i}$. If we store all these messages throughout the graph, we can compute any marginal of any node that we want. 
+
+By operating BP on factor graphs, a bipartite representation where edges are only between factors and variables, there are two kinds of messages that need to be constructed, variable-to-factor $\mu_{i \to \alpha}$ and factor-to-variable $\mu_{\alpha \to i}$:
+
+\begin{equation}
+\mu_{i \to \alpha}(X_i) = \prod_{\beta in N_{i} \setminus \alpha} \mu_{\beta \to i}(X_i)
+\end{equation}
+
+\begin{equation}
+\mu_{\alpha \to i}(X_i) = \sum_{\substack{X_{\alpha} \setminus X_i}} \psi_{\alpha}(X_{\alpha}) \prod_{j \in N_\alpha \setminus i} \mu_{j \to \alpha}(X_j)
+\end{equation}
+where $N_i$ are the neighbors of variable node $X_i$ (these are the factors that involve $X_i$) and $N_\alpha$ are the neighbors of factor nodes $\alpha$ (these are the variables that are directly coupled by $\psi_{\alpha}(X_{\alpha})$ \cite{inf_pgm_gnn}. These two equations can be jointly interpreted as messages sent out by factor nodes to other factor nodes. Firstly, the incoming messages to a factor node $\alpha$ is computed as $\mu_{i \to \alpha}$ by multiplying all the incoming messages from the connected factor nodes. In the next step, these incoming messages are multiplied by the factor node $\alpha_s$, and marginalized over all the variable nodes involved in that factor.  
+
+However, there is one significant caveat: BP can only extract \textit{exact} marginals on tree structures \cite{bp_book}. This is possible due to the non-cyclic nature of trees that allow messages to be passed unidirectionally and without conflicting information. Although the elimination algorithm itself can be generalized to any graphical model, it can only compute a single query. Moreover, the complexity of the algorithm is completely controlled by the elimination ordering of the variables, and this in itself is a computationally intensive process. Due to its efficiency and intuitive formulation, recent work has extended BP to approximate marginals for graphs with cycles, otherwise known as loopy belief propagation. This general case algorithm can be summarized with two steps:
+\begin{enumerate}
+    \item Initialize the messages between variables and factors with a uniform distribution 
+    \item At every step $t$, compute an updated message using the previous messages, until convergence (further iteraions no longer change the messages significantly):
+        \begin{equation}
+        \mu_{i \to \alpha}^{(t)}(X_i) = \prod_{\beta \in N_i \setminus \alpha} \mu_{\beta \to i}^{(t-1)}(X_i)
+        \end{equation}
+        \begin{equation}
+        \mu_{\alpha \to i}^{(t)}(X_i) = \sum_{\substack{X_{\alpha} \setminus X_i}} \psi_{\alpha}(X_{\alpha}) \prod_{j \in N_\alpha \setminus i} \mu_{j \to \alpha}^{(t-1)}(X_j)
+        \end{equation}
+\end{enumerate}
+
+In other words, messages are being passed around until convergence. However, convergence is not guaranteed in non-tree graphs. The intuition for this is that since BP is a local algorithm, it should be successful whenever the underlying graph is locally a tree. However, the trade-off with being able to define distributions locally is indeed that far apart variables become uncorrelated. Thus, in graphs where far apart variables are important in understanding the underlying distributions, BP will perform poorly \cite{bp_book}. Moreover, cycles  can introduce ambiguity in message passing, and the iterative updates may not converge or may converge to incorrect results.This analysis of BP naturally leads to the need for alternate methods that can improve approximation performance on non-tree graphs while remaining computationally tractable. 
+
+\subsection{Graph Neural Networks}
+Graph Neural Networks, a deep learning framework that uses the structure and feature information in a graph, allows for complex transformations between nodes. Therefore, GNN can encode probabilistic information about variables in the graphical model as nodes and send and receive messages (that are learned via non-linear transformation) about the probabilities. 
+Finally, after training, a nonlinear decoder could be used to approximate the marginal probabilities from each node. 
+Initially aligned with the methods from \cite{inf_pgm_gnn}, we trained a Gated Graph Neural Network (GG-NN) \cite{ggnn} updating nodal hidden states at each time $(t)$. The non-linearities are applied to obtain the hidden state vectors $h_i^{(T)}$ for each of the GNN node $v_i$. The hidden state vectors are initialized at $0$ and updated each time step $t$, with the messages received from neighboring nodes.
+For each set of connected $\{v_i, v_j\}$ in the GNN, a message $\bm{m}^{(t+1)}_{i\rightarrow j}$ from $v_i$ to $v_j$ is sent at time $t+1$:
+\begin{equation}
+    \bm{m}^{(t+1)}_{i \to j} = \mathcal{M}\left(\bm{h}^t_i, \bm{h}^t_j, e_{ij}\right)
+\end{equation}
+with $\mathcal{M}$ here is a multi-layer perceptron (MLP) with rectified linear units (ReLU), $e_{i, j}$ edge labels/properties between the nodes $v_i$, $v_j$ and $N(j)$ the neighboring nodes of $v_j$. 
+At time $t$, the messages received by a node $v_i$ is the sum of all  incoming messages:
+\begin{equation}
+    \bm{m}_{i}^{(t+1)} = \sum_{j \in N(i)} \bm{m}^{t+1}_{j \to i}
+\end{equation}
+with $N(i)$ the indices of neighboring nodes for node $v_i$.
+The update function for a hidden state vector at time $t$ for a node $v_i$ is defined by:
+\begin{align*}
+    \bm{h}_i^{(t)} = \mathcal{U}(\bm{h}_i^{(t-1)}, \bm{m}_{i}^{(t)})
+\end{align*}
+with $\mathcal{U}$ a specified update function, either a Gated Recurrent Unit (GRU) or an Long-Short Term Memory (LSTM). At the final state $T$ the output marginals $\hat{y}$ are obtained from:
+\begin{align*}
+    \bm{\hat{y}} = \sigma (\bm{h}^{(T)})
+\end{align*}
+This method proceeds from a variation of \cite{inf_pgm_gnn} derived from \cite{ggnn}'s GG-NNs. 
+The training is done using backpropagation minimizing the loss function $L(\bm{y}, \bm{\hat{y}})$ (in this work, we use cross-entropy loss which will be detailed in a later section). Given the architecture of GNNs, it is natural to think of how to extend it to the task of inference in PGMs. GNN nodes can encode probabilistic information about variables in the graphical model by sending and receiving messages. These messages are learned via nonlinear transformations that allow for complex relationships between nodes. With these parallels between message passing algorithms in PGMs and GNNs, and the potential of GNNs to learn probabilistic information in a computationally efficient way, the next point of discussion would be: \textit{how can we map the nodes of a PGM to nodes in GNNs}? As shown in Figure \ref{fig: mappings}a, \cite{inf_pgm_gnn} describe two different mappings that can be used. 
+\begin{figure}
+  \centering
+  \includegraphics[width=1.\linewidth]{GNN_nodes.png} % Change the file name and width accordingly
+  \caption{Mappings of PGM nodes into GNN nodes}
+  \label{fig: mappings}
+\end{figure}
+\subsubsection{Message Mapping}
+
+The first mapping as shown in Figure \ref{fig: mappings}b more closely resembles the structure of conventional BP, where the node in the GNN corresponds to the message $\mu_{i,j}$. Thus in a factor graph, this is just the factor itself. As demonstrated in \ref{fig: mappings}b, since messages flow bidirectionally, there are two messages per pairwise factor. To compute the message from variable node $v_i$ to $v_j$ in the PGM using the GNN updates described, we have the following updates at each iteration $t$:
+
+\begin{equation}
+m^{(t+1)}_{i \to j} = \mathcal{M}\left(\sum_{k \in N_{i} \setminus {j}} h^t_{k \to i}, e_{ij}\right)
+\end{equation}
+
+Where the hidden states are aggregated by summing over all hidden states involving variable node $v_i$ (i.e. its neighbors).  The hidden state is then updated by:
+
+\begin{equation}
+    h_{i \to j}^{(t+1)} = \mathcal{U}(h_{i \to j}^{(t)}, \bm{m}_{i \to j}^{(t + 1)})
+\end{equation}
+
+After convergence, the node marginals can be readily extracted. For example, to find the marginal of a variable node $X_i$, the hidden states of all its neighbors are summed over to obtain the hidden state of node $X_i$, representing its marginal distribution in this case:
+
+\begin{equation}
+    \hat{p}_i(X_i) = \mathcal{R}\left(\sum_{j \in N_i} h^{T}_{j \to i}\right)
+\end{equation}
+\subsubsection{Variable Mapping}
+
+% \anita{from my understanding to the paper, node mapping corresponds to the equations given in 7-10, where there is a corresponding hidden state for each variable node. please let me know if you agree} \alireza{Yeah, it simply ignores hidden states for factor nodes, and it just runs a gnn with nodes as the variables of pgm. The eq 7, 8, and 9 are done for just one time step, and then 10 at last}
+The second possible mapping, as shown in Figure \ref{fig: mappings}c, uses the variable nodes themselves as the GNN nodes. Given this formulation, there will be no hidden states that correspond to the factor nodes (and thus they will not be updated). The idea is that the factor nodes are still influencing the inference as they are embedded in the edges of the GNN. By relying on these parameters being passed into the message function on each iteration, we can avoid the representational power on the underlying factor nodes. Thus, the equations for updates are: 
+
+\begin{equation}
+m^{(t+1)}_{i \to j} = \mathcal{M}\left({h}^t_i, {h}^t_j, e_{ij}\right)
+\end{equation}
+
+Where the hidden states now directly correspond to their variable node in the PGM. The messages are then aggregated into a single message for the destination node;
+\begin{equation}
+    m^{(t+1)}_{i} = \sum_{j \in N_{i}} m^{(t+1)}_{j \to i}
+\end{equation}
+Finally, the hidden state is updated by:
+
+\begin{equation}
+    h_{i \to j}^{(t+1)} = \mathcal{U}(h_{i}^{(t)}, \bm{m}_{i}^{(t + 1)})
+\end{equation}
+
+Given the one to one mapping of variable node to GNN node, the readout can be obtained readily from the corresponding GNN node, $\textbf{h}_v$:
+\begin{equation}
+    \hat{p}_i(X_i) = \mathcal{R}(h^{T}_i)
+\end{equation}
+\subsection{Integrating Information from Past States}
+The learning method for our model is done through a time-sequential update of each node, using the update function $\mathcal{U}$ with which certain information from previous states is conserved, forgotten and combined with the new message information. To do this, we used a special type of GNN, Gated Graph Neural Networks. More specifically, we considered using both a Long Short Term Memory (LSTM) cell as well as a Gated Reccurent Unit cell. In addition to this, we also explore the use of soft attention in our work. 
+
+We implemented the LSTM and GRU as update function to regulate the information selection from time $t$ to $t+1$, as update functions. LSTMs were developped to solve the vanishing gradient problem for traditional recurrent neural networks (RNN) by incorporating specialized memory cells and gating mechanisms (an input gate, a forget gate and an output gate). These gates allow LSTMs to selectively retain information over time, enabling the model to capture and remember long-term dependencies within the sequential data in a selective manner. The GRUs, used in the implementations done by Yoon \cite{inf_pgm_gnn} were built as a variant of the LSTM architecture. They also exploit the gating mechanism to selectively include and pass on information. The memory cell is composed of an update gate, that combines the forget gate and the input gate, and of a reset gate. Both are known for solving the vanish gradient problem for short-term context and perform similarly well \cite{gruvslstm}. 
+
+While both were a great advance from traditional RNNs, they struggle with long-term contextual learning and long-run vanishing gradient. Both benefited from attention mechanisms which enable the model to focus on specific elements within the graph, assigning varying degrees of importance to different nodes during the sequential update process through a trained weighting process. We do this by using a MLP layer with LeakyRelu activation function that learns the importance of each messages and scale them with a Softmax function so that the weights sum to one. Through a weighted combination of these components, attention mechanisms allows the model to selectively consider relevant nodes. This adaptability and selective attention is useful in scenarios where certain nodes or connections play a more important role in the sequential evolution of the node data update.
+
+
+\section{Experiments}
+\subsection{Graph Selection and Task Settings}
+To understand how the two GNN methods work for approximate inference compared to BP, we strategically selected graph structures to emphasize their differences by choosing both sparse and highly connected graphs including grid and tree structures. 
+% Notably, BP is an \textit{exact} inference method on tree graphs. For this reason when considering its KL divergence $D_{KL}$ from the real distribution $p$, the estimated distribution $\hat{p}$ should be 0 (and thus the $-\log_{10}D_{KL}(p||\hat{p})$ should approach $\infty$). Since the two GNN methods are not exact, we would expect that the $-\log_{10}D_{KL}(p||\hat{p})$ for their respective estimated distributions will be worse than BP. With BP as a baseline, we will have a valuable comparison between an exact and approximate method. 
+
+% On the otherhand, BP loses its exactness when generalized to its loopy formulation, though it can still perform well on graphs with local tree structures. Its limitation in loopy graph structures tends to be in graphs where there are strong dependencies between nodes far from each other. 
+
+% Two tree structures were chosen: the path and the star as shown in \ref{fig:graphs}. In these graphs BP will outperform approximates. Additionally, the grid structure was chosen as a non tree graph as a fair comparison between different approximation techniques. We hypothesize that BP should not have a significant advantage of GNN methods, and vice versa. Finally, the barbell structure was used with the hypothesis that BP would struggle with the far out dependencies of the graph that a GNN may better capture. 
+
+Each graph structure was generated with $|N| = 9$ and $|N| = 16$ nodes,  where each node ${x_i} \in \{+ 1, -1 \}$. The 6 graph structures of interest are shown in Figure \ref{fig:graphs}. For data generation, we used the code-base provided by \cite{pgm_gnn_code} that can be found \href{https://github.com/sunfanyunn/pgm\_graph\_inference}{here}. To compare the performance and generalization capability of the different methods experimented on, we defined two different task settings. 
+\begin{itemize}
+    \item In-sample: each GNN implementation was trained and evaluated on each graph structure type individually.
+    \item Combined: each GNN implementation was trained on a combined dataset of 13 graph structures (structures defined in \cite{inf_pgm_gnn}), and evaluated on the 6 graphs of interest.
+\end{itemize}
+With regards to the in-sample experiments, for each graph structure and size set, we generated 5000 training and 1000 testing samples. For the combined experiments, we generated and combined 100 training samples of each graph structure (13 total structures) and 100 test samples. Using their codebase, the true marginal values were generated with exhaustive enumeration of states.
+
+\begin{figure}
+        \centering
+        \includegraphics[width=0.3\linewidth]{./graph_imgs/Star.png}
+        \includegraphics[width=0.3\linewidth]{./graph_imgs/Path.png}
+        \includegraphics[width=0.3\linewidth]{./graph_imgs/Cycle.png}
+        \includegraphics[width=0.3\linewidth]{./graph_imgs/Grid.png}
+        \includegraphics[width=0.3\linewidth]{./graph_imgs/Wheel.png}
+        \includegraphics[width=0.3\linewidth]{./graph_imgs/FC.png}
+        \caption{Explored Graph Structures. From left to right starting from the top: "star", "path", "cycle", "grid", "wheel" and "FC".}
+        \label{fig:graphs}
+\end{figure}
+
+\subsection{Tested Algorithms}
+We compared the BP algorithm to different implementations of GNNs with both the Message and the Variable Mapping. As presented above, the GNNs followed GG-NN architectures and we compared for each mapping a GNN with a GRU update function, a GNN with an LSTM update function. Additionally, for Message mapping we implemented a GNN with GRU update function coupled with an additional attention layer.
+
+The GNNs where trained using the cross entropy loss: $L(\bm{p}, \bm{\hat{p}})= -\bm{p}_i(x_i)\log(\bm{\hat{p}}_i(x_i))$ between exact and estimated marginals.
+
+\subsection{Computational Complexity Analysis}
+
+Additionally, evaluate the GNNs robustness with regards to inference time complexity. In addition to performance saw it valuable to track and compare the total inference time complexity of these models, in comparison to BP. All inference experiments run on a single laptop (cpu: AMD Ryzen 7 5700u). 
+
+\section{Results}
+
+We obtain the 'In-sample' and 'Combined' model performance results as well as the time complexity for 'Combined' inference, presented respectively in \ref{fig:in_perf}, 
+
+\subsection{In-Sample Performance}
+
+The in-sample results are presented in Figure \ref{fig:in_perf}. The GNNs with variable mapping and message mapping are identified as "Var" and "Msg", respectively. We quantify performance by taking the negative log10 of the average Kullback-Leibler divergence between the exact and estimated marginals: 
+\begin{equation}
+    performance = -\dfrac{1}{N}\sum_{i=1}^N log_{10}(D_{KL}[p_i(x_i) || \hat{p}_i(x_i)])
+\end{equation}
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{./figures/insample_perf.png}
+    \caption{In-sample experiment: GNNs trained on separate individual graph structures and sizes (n=9 \& n=16). Performance reported as negative log10(KL) w.r.t. ground-truth marginals.}
+    \label{fig:in_perf}
+\end{figure}
+We observe that the best performance results across all graph structures of all sizes are shared between two of our proposed extended GNN models: the message mapping GNN with LSTM update function and the message mapping GNN with additional attention layer: "Msg\_lstm" and "Msg\_attn", respectively. Our intuition behind this is that the LSTM and attention layer can increase the capacity of GNNs for modeling the dependencies, specially between long and complex graphs.
+
+We note that BP is not exact even on tree graphs. The authors of the BP implementation that we based our tests on observed similar results and stated: "We thoroughly checked our implementation and attribute this to accumulation of numerical error" \cite{pgm_gnn_code}. We have also carefully verified the implementation without finding any errors, so we conclude likewise.
+
+\subsection{Combined Performance}
+
+The "combined" results are presented in Figure \ref{fig:out_perf}. The GNNs trained on the combined dataset of 13 graph structures were able to generalize to the different graph types and demonstrate similar performance results as the in-sample case (Figure \ref{fig:in_perf}). Figure \ref{fig:out_perf} also showcases the reported BP performance from the reference paper \cite{inf_pgm_gnn} ("BP ref" in the figure). Comparing with the reference BP performance, we note that BP performs best on simple tree-like graphs, but underperforms relative to the GNNs on the loopier graph structures. 
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{./figures/outsample_perf.png}
+    \caption{Combined experiment: GNNs trained on combined dataset. Performance ( - log10(KL) ) on different graph types (n=9 \& n=16). BP performance as reported in reference paper labeled as "BP ref"}
+    \label{fig:out_perf}
+\end{figure}
+
+
+% \begin{table}
+%     \centering
+%     \begin{tabular}{cccccccc}
+%          & Grid & Path & Star \\%& Cycle & Wheel & Tree & FC \\
+%        Belief Passing  & 3.48 & 3.89 & 3.77 \\%&  &  &  & \\
+%        %Monte Carlo MC  & 3.06 & 3.36 & 3.12 &  &  &  & \\
+%        Message Node  & 4.05 & 5.85 & 5.23 \\% &  &  &  & \\
+%      Variable Node & 3.14 & 4.47 & 2.87 \\%&  &  &  & \\
+%     \end{tabular}
+%     \caption{$-log_{10}(D_{KL})$ small graphs}
+%     \label{tab:res_small}
+% \end{table}
+
+% \begin{table}
+%     \centering
+%     \begin{tabular}{cccc}%{cccccccc}
+%          & Grid & Path & Star\\ %& Cycle & Wheel & Tree & FC \\
+%        Belief Passing  &3.20 & 3.80 & 3.49 \\%&  &  &  & \\
+%        %Monte Carlo MC  & 2.87 & 3.28 & 2.67 &  &  &  & \\
+%        Message Node  & 3.45 & 5.42 & 4.57 \\%&  &  &  & \\
+%         Variable Node & 2.87 & 4.58 & 2.64\\% &  &  &  & \\
+%     \end{tabular}
+%     \caption{$-log_{10}(D_{KL})$ large graphs}
+%     \label{tab:res_large}
+% \end{table}
+
+    
+% \begin{figure}[ht]
+%     \centering
+
+%     \begin{subfigure}
+%     \centering
+%      \includegraphics[width=0.1\linewidth]{./graph_imgs/Star.png}
+%      \includegraphics[width=0.1\linewidth]{./graph_imgs/Path.png}
+%      \includegraphics[width=0.1\linewidth]{./graph\_imgs/Cycle.png}
+%      \includegraphics[width=0.1\linewidth]{./graph\_imgs/Grid.png}
+%      \includegraphics[width=0.1\linewidth]{./graph\_imgs/Wheel.png}
+%      \includegraphics[width=0.1\linewidth]{./graph\_imgs/FC.png}
+%     \end{subfigure}
+   
+%      \begin{subfigure}
+%          \centering
+%          \includegraphics[width=0.1\linewidth]{plots/star/res_mgnn_inference_star_small_star_small_bp.png}
+%          \includegraphics[width=0.1\linewidth]{plots/path/res_mgnn_inference_path_small_path_small_bp.png}
+%          \includegraphics[width=0.1\linewidth]{plots/grid/res_grid_small_mgnn_inference_bp.png}
+
+%          \includegraphics[width=0.1\linewidth]{plots/star/res_mgnn_inference_star_small_star_small_gnn.png}   
+%          \includegraphics[width=0.1\linewidth]{plots/path/res_mgnn_inference_path_small_path_small_gnn.png}    \includegraphics[width=0.1\linewidth]{plots/grid/res_grid_small_mgnn_inference_gnn.png}
+        
+%          \includegraphics[width=0.1\linewidth]{plots/star/res_factor_gnn_inference_star_small_star_small_gnn.png}
+%          \includegraphics[width=0.1\linewidth]{plots/path/res_factor_gnn_inference_path_small_path_small_gnn.png}
+%          \includegraphics[width=0.1\linewidth]{plots/grid/res_grid_small_factor_gnn_inference_gnn.png}
+%      \end{subfigure}
+%      \label{fig:large_plots}
+%      \caption{Scatter plots for True vs Expected Marginal with BP, Variable Node GRU GNN, Factor GRU GNN (top to bottom) for small data (n=9)\anthony{Either we remove this figure or add the missing scatter plots}}
+%  \end{figure}
+
+\subsection{Computation Time}
+
+Here we compare inference times of the various methods on the small graphs in Figure \ref{fig:inf_time}. We observe that BP performs faster on the sparse graphs ("star" and "path"), but as the graphs get denser, its computation grows exponentially, while the GNNs perform increasingly and significantly faster. Akin to the performance results presented in the previous section, the GNNs scale better than BP to complex graphs. 
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=1\linewidth]{./figures/inference_time.png}
+    \caption{Average graph inference time (in milliseconds) on small (n=9) graph structures for each method.}
+    \label{fig:inf_time}
+\end{figure}
+    
+% - Exact inference time (brute-force). Performed on 3 sizes: (n=9, n=16, n=25) to show how exact inference time scales poorly with graph size.
+
+% \begin{table}
+%     \centering
+%     \begin{tabular}{cccccccc}
+%          & Grid & Path & Star & Cycle & Wheel & Tree & FC \\
+%        small (n=9)  &0.0038 & 0.0029 & 0.0031 & 0.0029 & 0.0030 & 0.0030 & \\
+%        large (n=16)  & 0.4112 & 0.4021 & 0.3954 & 0.4034 & 0.4020 & 0.4086 & \\
+%        very large (n=25) & 227.9 & 226.8 & 229.8 & 225.8 & 231.8 & 228.2 & \\
+%     \end{tabular}
+%     \caption{Average inference time for graph structures of different sizes in seconds (s)}
+%     \label{tab:exact_time}
+% \end{table}
+
+% \begin{table}
+%     \centering
+%     \begin{tabular}{cccc}
+%          & Star & Grid & FC \\
+%        small (n=9)  & 0.0038 & 0.0031 & 0.0030 \\
+%        large (n=16)  & 0.4112 & 0.3954 & 0.4086 \\
+%        very large (n=25) & 227.9 & 229.8 & 228.2 \\
+%     \end{tabular}
+%     \caption{Average exact inference time for three graph structures (star, grid, fc) of different sizes in seconds (s) \anthony{Did not find where to plug this into the report. I don't think it is necessary.}}
+%     \label{tab:exact_time}
+% \end{table}
+
+
+\section{Conclusion and Future Directions}
+% \anita{tbd}
+In this work, we experimented with how GNNs perform at inference tasks, particularly taking the marginal distribution of each variable, compared to belief propagation. To make a fair comparison, we thoroughly experimented with different aspects, including different graph dependencies and complexities. We observed that the GNNs perform far better than belief propagation whenever we increase the complexity of graphical models all the while remaining computationally efficient. For BP, on the other hand, the time complexity grows exponentially and the performance drops significantly. We integrated GNNs with different update functions, particularly LSTMs and attention layers, which boost the performance on different inference tasks, an idea that was not examined in the original paper. For future development, we are interested in reformulating other inference tasks, such as MAP and MLE, with GNNs. Moreover, the main focus of this work was on the binary graphical models, extending to non-binary ones is also a logical and interesting next step.
+
+
+
+
+\bibliography{bib}
+\bibliographystyle{icml2020}
+
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2020. Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
